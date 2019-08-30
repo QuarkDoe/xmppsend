@@ -5,10 +5,10 @@ Simple tool to send xmpp messages from command line.
 xmppsend [options] 
 
 ## Options:
-    -h, --help                          Help message
-    -v, --verbose                       Be verbose.
-    -c, --config <file>                 Configuration file. Default are ~/.config/xmppsend.cfg
-    -t, --root <config root>            Configuration root. Default are 'xmpp'.
+    -h, --help                          Help message.
+    -v, --verbose                       Be verbose and print debug information.
+    -c, --config <file>                 Configuration file. Default is ~/.config/xmppsend.cfg
+    -t, --root <config root>            Configuration root. Default is 'xmpp'.
     -j, --jid <user JID>                Use JID instead of the one in the configuration file.
     -P, --password <user password>      Use password instead of the one in the configuration file.
     -s, --server <server addr>          Alternative host if it is different from the server part of your JID.
