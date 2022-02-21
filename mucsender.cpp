@@ -15,6 +15,7 @@
  */
 
 #include <iostream>
+#include <sstream>
 
 #include <gloox/messagesession.h>
 
@@ -26,11 +27,11 @@ using namespace msg;
 
 MUCSender::MUCSender( msg::Messenger* parent, const string& muc_jid ): parent( parent ) {
 
-	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 
-	Client* client = parent->getClient();
+	auto client = parent->getClient();
 
-	nick = new JID( muc_jid );
+	nick = make_unique<JID>( muc_jid );
 
 	if( nick->resource().empty() ) {
 		nick->setResource( client->jid().username() );
@@ -38,62 +39,76 @@ MUCSender::MUCSender( msg::Messenger* parent, const string& muc_jid ): parent( p
 }
 
 MUCSender::~MUCSender() {
-	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
-
-	delete room;
-	delete nick;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 }
 
 void msg::MUCSender::start() {
-	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 
-	room = new MUCRoom( parent->getClient(), *nick, this );
+	room = make_unique<MUCRoom>( parent->getClient(), *nick, this );
 	room->setRequestHistory( 0, MUCRoom::HistoryMaxStanzas );
 	room->join();
 }
 
 void MUCSender::handleMUCError( gloox::MUCRoom* room, gloox::StanzaError error ) {
-	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 
 	cerr << "Can'nt join to " << nick->full() << endl;
 	parent->remove_muc_sender( nick->full() ); //TODO: кажется как-то ну не очень правильно тут делаем.
 }
 
 void MUCSender::handleMUCInfo( gloox::MUCRoom* room, int features, const std::string& name, const gloox::DataForm* infoForm ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 }
 
 void MUCSender::handleMUCInviteDecline( gloox::MUCRoom* room, const gloox::JID& invitee, const std::string& reason ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 }
 
 void MUCSender::handleMUCItems( gloox::MUCRoom* room, const Disco::ItemList& items ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 }
 
 void MUCSender::handleMUCMessage( gloox::MUCRoom* room, const gloox::Message& msg, bool priv ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ){
+		clog << __PRETTY_FUNCTION__ << endl;
+		clog << "\tfrom:\t" << msg.from().full() << endl;
+		clog << "\tid:\t" << msg.id() << endl;
+		clog << "\tsubj:\t" << msg.subject() << endl;
+		clog << "\tbody:\t" << msg.body() << endl;
+	}
+
+	if( msg.body() == parent->getClient()->jid().resource() ){
+		if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << ": got stop message" << endl;
+		parent->remove_muc_sender( nick->full() );
+	}
+
 }
 
 void MUCSender::handleMUCParticipantPresence( gloox::MUCRoom* room, const gloox::MUCRoomParticipant participant, const gloox::Presence& presence ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) {
+		clog << __PRETTY_FUNCTION__ << endl;
+		clog << "\t" << participant.nick->full() << endl;
+	}
 
 	if( presence.presence() == Presence::Available && participant.nick->full() == nick->full() ) {
-		if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__  << ": joined to room:" << room->name() << " with affilation " << room->affiliation() << endl;
+		if( parent->isDebug() ) clog << __PRETTY_FUNCTION__  << ": joined to room:" << room->name() << " with affilation " << room->affiliation() << endl;
 
 		room->send( parent->getMessage() );
-		Client* client = parent->getClient();
-		MessageSession* session = new MessageSession( client, *nick );
+
+		// send 'stop' message
+		auto client = parent->getClient();
+		auto session = new MessageSession( client, *nick );
 		session->send( client->jid().resource() );
 		client->disposeMessageSession( session );
 	}
 }
 
 bool MUCSender::handleMUCRoomCreation( gloox::MUCRoom* room ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 	return true;
 }
 
 void MUCSender::handleMUCSubject( gloox::MUCRoom* room, const std::string& nick, const std::string& subject ) {
-// 	if( parent->isDebug() ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( parent->isDebug() ) clog << __PRETTY_FUNCTION__ << endl;
 }

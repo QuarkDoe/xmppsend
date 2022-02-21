@@ -18,6 +18,7 @@
 #define MUCSENDER_H
 
 #include <string>
+#include <memory>
 #include <gloox/mucroom.h>
 #include <gloox/mucroomhandler.h>
 
@@ -50,8 +51,8 @@ public:
 
 private:
 	Messenger* parent;
-	JID* nick;
-	MUCRoom* room;
+	unique_ptr<JID> nick;
+	unique_ptr<MUCRoom> room;
 };
 
 }

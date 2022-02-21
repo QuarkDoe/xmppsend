@@ -153,16 +153,16 @@ string read_from_stream( istream& inp ) {
 }
 
 void print_setting( Setting& s ) {
-	cerr << s.getPath() << " ";
+	clog << s.getPath() << " ";
 
 	if( s.isAggregate() ) {
-		cerr << endl;
+		clog << endl;
 
 		for( auto& it : s ) {
 			print_setting( it );
 		}
 	} else {
-		cerr << s.c_str() << endl;
+		clog << s.c_str() << endl;
 	}
 }
 
@@ -185,15 +185,15 @@ int main( int argc, char** argv ) {
 		config->init_config();
 
 		if( config->get_debug() ) {
-			cerr << "config.config: " << config->get_conf_file() << endl;
-			cerr << "config.root: " << config->get_root() << endl;
-			cerr << "config.jid: " << config->get_jid() << endl;
-			cerr << "config.jid is valid: " << config->get_JID() << endl;
-			cerr << "config.password: " << config->get_password().length() << endl;
-			cerr << "config.server: " << config->get_server() << endl;
-			cerr << "config.port: " << config->get_port() << endl;
-// 			cerr << "config.component: " << config->component.get_or_default( "<not defined>" ) << endl;
-			cerr << "config.message: " << config->message.get_or_default( "<not defined>" ) << endl;
+			clog << "config.config: " << config->get_conf_file() << endl;
+			clog << "config.root: " << config->get_root() << endl;
+			clog << "config.jid: " << config->get_jid() << endl;
+			clog << "config.jid is valid: " << config->get_JID() << endl;
+			clog << "config.password: " << config->get_password().length() << endl;
+			clog << "config.server: " << config->get_server() << endl;
+			clog << "config.port: " << config->get_port() << endl;
+// 			clog << "config.component: " << config->component.get_or_default( "<not defined>" ) << endl;
+			clog << "config.message: " << config->message.get_or_default( "<not defined>" ) << endl;
 		}
 	} catch( exc::exception& e ) {
 		cerr << e.text() << endl;

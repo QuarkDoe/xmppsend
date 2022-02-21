@@ -10,7 +10,7 @@ include( CheckIncludeFile )
 include( CheckIncludeFileCXX )
 include( MyFind )
 
-set( CMAKE_CXX_STANDARD 11 )
+set( CMAKE_CXX_STANDARD 17 )
 
 my_pkg_check_modules( LIBCONFIG REQUIRED libconfig++>=1.4.8 )
 include_directories( ${LIBCONFIG_INCLUDE_DIRS} )

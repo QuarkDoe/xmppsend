@@ -37,28 +37,26 @@ Messenger::Messenger( const string& user_jid, const string& user_pwd ) {
 	debug = false;
 	result = 0;
 	logLevel = LogLevelWarning;
-	jid = new JID( user_jid );
+	jid = make_unique<JID>( user_jid );
 	pwd = user_pwd;
-	client = new Client( *jid, pwd );
+	client = make_unique<Client>( *jid, pwd );
 }
 
 Messenger::~Messenger() {
-	if( debug ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__ << endl;
 
 	client->disconnect();
-	delete client;
-	delete jid;
 }
 
 int Messenger::start() {
-	if( debug ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__ << endl;
 
 	client->registerConnectionListener( this );
 	client->registerMessageHandler( this );
 	client->logInstance().registerLogHandler( logLevel, LogAreaAll, this );
 
 	if( debug ) {
-		cerr << __PRETTY_FUNCTION__ << ": connect to " << client->server() << ":" << client->port() << endl;
+		clog << __PRETTY_FUNCTION__ << ": connect to " << client->server() << ":" << client->port() << endl;
 	}
 
 	client->connect( true );
@@ -67,11 +65,11 @@ int Messenger::start() {
 }
 
 void Messenger::onConnect() {
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": connected" << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__  << ": connected" << endl;
 
 	client->setPresence( Presence::Available, -1 );
 
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": total destinations " << destinations.size() << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__  << ": total destinations " << destinations.size() << endl;
 
 	for( auto& dst : destinations ) {
 		switch( dst.type ) {
@@ -85,24 +83,25 @@ void Messenger::onConnect() {
 		}
 	}
 
-	//костыли
 	std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-
 	{
 		std::lock_guard<std::mutex> lck( this->map_guard );
 
-		if( muc_senders.empty() )  client->disconnect();
+		if( muc_senders.empty() ){
+			if( debug ) clog << __PRETTY_FUNCTION__  << ": do disconnect" << endl;
+			client->disconnect();
+		}
 	}
 
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": finished" << endl;
+// 	if( debug ) clog << __PRETTY_FUNCTION__  << ": finished" << endl;
 }
 
 void Messenger::sendTo( const string& dst ) {
 
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": send to:" << dst << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__  << ": send to:" << dst << endl;
 
 	JID to( dst );
-	auto session = new MessageSession( client, to );
+	auto session = new MessageSession( client.get(), to );
 	session->send( message );
 	client->disposeMessageSession( session );
 
@@ -112,7 +111,7 @@ void Messenger::sendTo( const string& dst ) {
 
 void Messenger::sendToRoom( const string& room ) {
 
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": send to room:" << room << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__  << ": send to room:" << room << endl;
 
 	JID nick( room );
 
@@ -138,15 +137,15 @@ bool Messenger::onTLSConnect( const CertInfo& info ) {
 	if( debug ) {
 		time_t from( info.date_from );
 		time_t to( info.date_to );
-		cerr << __PRETTY_FUNCTION__ << endl;
-		cerr << __PRETTY_FUNCTION__  << ": TLS connect" << endl;
-		cerr << __PRETTY_FUNCTION__  << ": Server: " << info.server << endl;
-		cerr << __PRETTY_FUNCTION__  << ": Protocol: " << info.protocol << endl;
-		cerr << __PRETTY_FUNCTION__  << ": Issuer: " << info.issuer << endl;
-		cerr << __PRETTY_FUNCTION__  << ": Compression: " << info.compression << endl;
-		cerr << __PRETTY_FUNCTION__  << ": Status: " << info.status << endl;
-		cerr << __PRETTY_FUNCTION__  << ": from: " << ctime( &from );
-		cerr << __PRETTY_FUNCTION__  << ": to: " << ctime( &to );
+		clog << __PRETTY_FUNCTION__ << endl;
+		clog << __PRETTY_FUNCTION__  << ": TLS connect" << endl;
+		clog << __PRETTY_FUNCTION__  << ": Server: " << info.server << endl;
+		clog << __PRETTY_FUNCTION__  << ": Protocol: " << info.protocol << endl;
+		clog << __PRETTY_FUNCTION__  << ": Issuer: " << info.issuer << endl;
+		clog << __PRETTY_FUNCTION__  << ": Compression: " << info.compression << endl;
+		clog << __PRETTY_FUNCTION__  << ": Status: " << info.status << endl;
+		clog << __PRETTY_FUNCTION__  << ": from: " << ctime( &from );
+		clog << __PRETTY_FUNCTION__  << ": to: " << ctime( &to );
 	}
 
 	return true;
@@ -235,7 +234,7 @@ const char* get_stream_error( StreamError e ) {
 }
 
 void Messenger::onDisconnect( ConnectionError e ) {
-	if( debug ) cerr << __PRETTY_FUNCTION__  << ": disconnected: " << e << endl;
+	if( debug ) clog << __PRETTY_FUNCTION__  << ": disconnected: " << e << endl;
 
 	if( e != ConnUserDisconnected && e != ConnNoError ) {
 		result = e;
@@ -315,25 +314,44 @@ void Messenger::onDisconnect( ConnectionError e ) {
 }
 
 void Messenger::remove_muc_sender( const string& room ) {
+	if( debug ){
+		clog << __PRETTY_FUNCTION__  << endl;
+		clog << "room: " << room << endl;
+	}
+
 	JID room_jid( room );
 	auto& bare = room_jid.bare();
 	{
 		std::lock_guard<std::mutex> lck( this->map_guard );
 		muc_senders.erase( bare );
 
-		if( muc_senders.empty() )  client->disconnect();
+		if( muc_senders.empty() ){
+			if( debug ) clog << __PRETTY_FUNCTION__  << ": do disconnect" << endl;
+			client->disconnect();
+		}
+
 	}
 }
 
 void Messenger::handleMessage( const gloox::Message& msg, gloox::MessageSession* session ) {
-	if( debug ) cerr << __PRETTY_FUNCTION__ << endl;
+	if( debug ) {
+		clog << __PRETTY_FUNCTION__ << endl;
+		clog << "\tfrom:[" << msg.from() << "]" << endl;
+		clog << "\tfrom:[" << msg.from().bare() << "]" << endl;
+		clog << "\tfrom:[" << msg.from().bareJID() << "]" << endl;
+		clog << "\tfrom:[" << msg.from().bareJID().full() << "]" << endl;
+		clog << "\tid:" << msg.id() << endl;
+		clog << "\tsubj:" << msg.subject() << endl;
+		clog << "\tbody:" << msg.body() << endl;
+
+	}
 
 	if( msg.body() == client->jid().resource() ) {
-		if( debug ) cerr << __PRETTY_FUNCTION__ << " remove muc_sender " << msg.from().bare() << endl;
+		if( debug ) clog << __PRETTY_FUNCTION__ << " remove muc_sender " << msg.from().bare() << endl;
 
 		remove_muc_sender( msg.from().bare() );
 
-		if( debug ) cerr << __PRETTY_FUNCTION__ << " muc_sender " << msg.from().bare() << " removed" << endl;
+		if( debug ) clog << __PRETTY_FUNCTION__ << " muc_sender " << msg.from().bare() << " removed" << endl;
 	}
 }
 

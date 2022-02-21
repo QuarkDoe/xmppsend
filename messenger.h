@@ -159,7 +159,7 @@ public:
 	virtual void handleLog( LogLevel, LogArea, const std::string& ) override;
 
 	Client* getClient() {
-		return client;
+		return client.get();
 	};
 
 	const string& getMessage() {
@@ -173,8 +173,8 @@ public:
 	void remove_muc_sender( const string& );
 
 private:
-	Client* client;
-	JID* jid;
+	unique_ptr<Client> client;
+	unique_ptr<JID> jid;
 	string pwd;
 	vector<Destination> destinations;
 	string message;
