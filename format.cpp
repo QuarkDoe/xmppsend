@@ -20,6 +20,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <cstdint>
 
 namespace fmt{
 
